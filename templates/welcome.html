@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome - UNIBEN CPE Portal</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .hero { text-align: center; padding: 60px 20px; }
+        .hero h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 10px; }
+        .hero p { font-size: 1.2rem; color: #555; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto; }
+        
+        .btn-secondary { background: white; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-secondary:hover { background: #f8fafc; }
+        
+        .btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .step-icon { font-size: 2.5rem; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container nav">
+            <div class="centered-title">UNIBEN CPE Portal</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card hero">
+            <h1>Project AI Sentinel</h1>
+            <p>The official AI detection and submission portal for final year Computer Engineering student projects.</p>
+            <div class="btn-group">
+                <a href="/scan" style="text-decoration: none; width: 220px;">
+                    <button class="btn">Proceed to Scanner</button>
+                </a>
+                <a href="/login" style="text-decoration: none; width: 220px;">
+                    <button class="btn btn-secondary">Admin Portal</button>
+                </a>
+            </div>
+        </div>
+
+        <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">How It Works</h2>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="step-icon">📝</div>
+                <h3>Step 1: Details</h3>
+                <p style="font-size: 0.9rem; color: #666;">Enter your official SURNAME FIRSTNAME and Matriculation Number.</p>
+            </div>
+            <div class="stat-box">
+                <div class="step-icon">📁</div>
+                <h3>Step 2: Upload</h3>
+                <p style="font-size: 0.9rem; color: #666;">Select and upload your final project document in PDF format (Max 16MB).</p>
+            </div>
+            <div class="stat-box">
+                <div class="step-icon">🖨️</div>
+                <h3>Step 3: Result</h3>
+                <p style="font-size: 0.9rem; color: #666;">Wait for the engine to analyze your text and download your official report.</p>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 30px; border-left: 5px solid var(--accent); padding: 30px;">
+            <h3 style="color: var(--primary); margin-top: 0;">⚠️ Academic Integrity Guidelines</h3>
+            <p style="color: #444; line-height: 1.6;">
+                The Department of Computer Engineering maintains strict standards for original work. 
+                This system evaluates project submissions for AI-generated content probability, text perplexity, and burstiness. 
+                Ensure your submission represents your own authentic research and writing before scanning.
+            </p>
+        </div>
+        
+        <footer style="text-align: center; color: #888; font-size: 0.9rem; margin-top: 50px;">
+            &copy; 2026 Department of Computer Engineering, University of Benin. All Rights Reserved.
+        </footer>
+    </div>
+</body>
+</html>
