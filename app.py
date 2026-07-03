@@ -1,15 +1,18 @@
 import os
 from datetime import datetime
-import random # (Using random for mock AI stats until you plug in your RoBERTa model)
+import random
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.secret_key = "uniben_cpe_deployment_secret"
+app.secret_key = os.environ.get('SECRET_KEY', 'uniben_cpe_deployment_secret')
 
 # --- DATABASE SETUP ---
-BASE_DIR = os.path.abspath(os.path.dirname(__name__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'project.db')
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BASE_DIR, 'project.db'))
+if db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -17,7 +20,7 @@ db = SQLAlchemy(app)
 class AnalysisRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_name = db.Column(db.String(100), nullable=False)
-    matric_no = db.Column(db.String(20), unique=True, nullable=False) # Enforces 1 submission per student
+    matric_no = db.Column(db.String(20), unique=True, nullable=False)
     filename = db.Column(db.String(100), nullable=False)
     ai_score = db.Column(db.Integer, nullable=False)
     verdict = db.Column(db.String(20), nullable=False)
@@ -32,7 +35,7 @@ with app.app_context():
 # --- HTML PAGE ROUTES ---
 @app.route('/')
 def portal():
-    return render_template('ai-detector-portal.html')
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
