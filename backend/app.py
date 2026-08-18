@@ -376,6 +376,7 @@ def delete_record(id):
 # ─── Health check ────────────────────────────────────────────────────────────
 
 
+@app.route("/health")
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})
