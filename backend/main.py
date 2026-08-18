@@ -1,7 +1,5 @@
 import os
 import io
-import math
-import statistics
 from datetime import datetime
 
 from flask import Flask, request, jsonify
@@ -14,9 +12,9 @@ from flask_jwt_extended import (
     get_jwt_identity,
 )
 
-import requests as http_requests
 from PyPDF2 import PdfReader
 from docx import Document as DocxDocument
+from app.stylometry.engine import analyze_text
 
 # ─── App Setup ───────────────────────────────────────────────────────────────
 
@@ -36,9 +34,6 @@ CORS(app, origins=[frontend_url, "http://localhost:3000"], supports_credentials=
 
 jwt = JWTManager(app)
 db = SQLAlchemy(app)
-
-WASITAI_API_KEY = os.environ.get("WASITAI_API_KEY", "")
-WASITAI_BASE_URL = "https://www.wasitaigenerated.com/api/v1"
 
 # ─── Database Model ──────────────────────────────────────────────────────────
 
@@ -93,118 +88,50 @@ def extract_text(filename: str, file_storage) -> str:
         raise ValueError(f"Unsupported file type: {filename}")
 
 
-# ─── WasItAI API ─────────────────────────────────────────────────────────────
-
-CHUNK_SIZE = 4000  # words per chunk — keeps us well under the 413 limit
-
-
-def chunk_text(text: str, max_words: int = CHUNK_SIZE) -> list[str]:
-    """Split text into chunks of roughly max_words words."""
-    words = text.split()
-    if len(words) <= max_words:
-        return [text]
-    chunks = []
-    for i in range(0, len(words), max_words):
-        chunks.append(" ".join(words[i : i + max_words]))
-    return chunks
-
-
-def call_wasitai(content: str) -> dict:
-    """Call the WasItAI /detect/text endpoint. Returns the JSON response."""
-    resp = http_requests.post(
-        f"{WASITAI_BASE_URL}/detect/text",
-        headers={"Authorization": f"Bearer {WASITAI_API_KEY}"},
-        json={"content": content},
-        timeout=60,
-    )
-    resp.raise_for_status()
-    return resp.json()
-
-
-def aggregate_chunk_results(results: list[dict]) -> dict:
-    """Merge multiple chunk results into a single document-level result."""
-    all_sentences = []
-    confidences = []
-
-    for r in results:
-        all_sentences.extend(r.get("sentences", []))
-        confidences.append(r.get("confidence", 0))
-
-    avg_confidence = sum(confidences) / len(confidences) if confidences else 0
-    is_ai = avg_confidence > 0.5
-
-    return {
-        "isAI": is_ai,
-        "confidence": round(avg_confidence, 4),
-        "model": results[0].get("model", "unknown") if results else "unknown",
-        "sentences": all_sentences,
-    }
+# ─── Stylometry Analysis ──────────────────────────────────────────────────────
 
 
 def analyse_text(text: str) -> dict:
     """
-    Full pipeline: chunk long text, call WasItAI per chunk,
-    aggregate, then derive the metrics our UI expects.
+    Run local stylometry analysis and map to the fields our UI expects.
     """
-    chunks = chunk_text(text)
+    result = analyze_text(text)
 
-    if len(chunks) == 1:
-        raw = call_wasitai(chunks[0])
-    else:
-        chunk_results = []
-        for chunk in chunks:
-            chunk_results.append(call_wasitai(chunk))
-        raw = aggregate_chunk_results(chunk_results)
+    if result.get("status") == "insufficient_text":
+        return {"error": result.get("message", "Not enough text for analysis.")}
 
-    confidence = raw["confidence"]  # 0.0 – 1.0
-    sentences = raw.get("sentences", [])
+    ai_score = result.get("ai_probability", 0)
+    classification = result.get("classification", "mixed_or_uncertain")
 
-    # ── Map to existing model fields ──────────────────────────────────────
-    ai_score = round(confidence * 100)
+    # Map classification to verdict strings
+    verdict_map = {
+        "likely_ai": "AI Generated",
+        "mixed_or_uncertain": "Mixed",
+        "likely_human": "Human Written",
+    }
+    verdict = verdict_map.get(classification, "Mixed")
 
-    if confidence > 0.6:
-        verdict = "AI Generated"
-    elif confidence > 0.3:
-        verdict = "Mixed"
-    else:
-        verdict = "Human Written"
+    # Use statistics from the engine
+    stats = result.get("statistics", {})
+    signals = result.get("signals", [])
 
-    # Derive secondary metrics from sentence-level data
-    if sentences:
-        sentence_scores = [s.get("confidence", 0) for s in sentences]
-        human_scores = [s.get("scores", {}).get("human", 0) for s in sentences]
+    # Perplexity proxy: use readability score (inverted - lower readability = more perplexing)
+    readability = stats.get("readability_proxy", 50)
+    perplexity = round(max(0, min(100, 100 - readability)), 1)
 
-        # Perplexity proxy: variance in sentence AI scores (higher = more erratic)
-        perplexity = round(
-            statistics.stdev(sentence_scores) * 100 if len(sentence_scores) > 1 else 0,
-            1,
-        )
+    # Burstiness: extract from signals or compute from statistics
+    burstiness_signal = next((s for s in signals if s["name"] == "sentence_uniformity"), None)
+    burstiness = round((1 - burstiness_signal["value"]) * 100, 1) if burstiness_signal else 50.0
 
-        # Burstiness proxy: how uneven the AI-flag distribution is
-        ai_flags = [1 if s.get("isAI", False) else 0 for s in sentences]
-        if len(ai_flags) > 1:
-            burstiness = round(statistics.stdev(ai_flags) * 100, 1)
-        else:
-            burstiness = 0.0
-
-        # Consistency: % of sentences agreeing with the document-level verdict
-        agreement = sum(1 for s in sentences if s.get("isAI", False) == raw["isAI"])
-        consistency = round((agreement / len(sentences)) * 100) if sentences else 0
-    else:
-        perplexity = 0.0
-        burstiness = 0.0
-        consistency = 0
+    # Consistency: use confidence from the engine
+    consistency = round(result.get("confidence", 50))
 
     return {
-        "ai_score": ai_score,
+        "ai_score": round(ai_score),
         "verdict": verdict,
         "perplexity": perplexity,
         "burstiness": burstiness,
         "consistency": consistency,
-        "is_ai": raw["isAI"],
-        "confidence": confidence,
-        "model": raw.get("model", ""),
-        "sentence_count": len(sentences),
     }
 
 
@@ -266,32 +193,10 @@ def analyze():
     if not text:
         return jsonify({"error": "Could not extract text from the uploaded file."}), 400
 
-    # Call WasItAI
-    if not WASITAI_API_KEY:
-        return jsonify({"error": "WASITAI_API_KEY is not configured on the server."}), 500
-
-    try:
-        result = analyse_text(text)
-    except http_requests.exceptions.HTTPError as e:
-        status = e.response.status_code if e.response is not None else 500
-        body = {}
-        try:
-            body = e.response.json()
-        except Exception:
-            pass
-        if status == 402:
-            return (
-                jsonify({"error": "Out of detection credits. Please contact admin."}),
-                402,
-            )
-        return (
-            jsonify({"error": f"Detection API error: {body.get('error', str(e))}"}),
-            status,
-        )
-    except http_requests.exceptions.Timeout:
-        return jsonify({"error": "Detection API timed out. Please try again."}), 504
-    except Exception as e:
-        return jsonify({"error": f"Analysis failed: {e}"}), 500
+    # Run stylometry analysis
+    result = analyse_text(text)
+    if "error" in result:
+        return jsonify({"error": result["error"]}), 400
 
     # Save to database
     new_record = AnalysisRecord(

@@ -4,6 +4,5 @@ flask-sqlalchemy
 flask-jwt-extended
 PyPDF2
 python-docx
-requests
 gunicorn
 psycopg2-binary
