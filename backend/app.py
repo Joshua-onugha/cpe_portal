@@ -24,9 +24,10 @@ app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "uniben_cpe_secret")
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "uniben_cpe_jwt_secret")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URL", "sqlite:///project.db"
-)
+db_url = os.environ.get("DATABASE_URL", "sqlite:///project.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Allow the Vercel frontend origin (set via env in production)
