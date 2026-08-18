@@ -28,9 +28,16 @@ if db_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Allow the Vercel frontend origin (set via env in production)
-frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-CORS(app, origins=[frontend_url, "http://localhost:3000"], supports_credentials=True)
+# Allow the Vercel frontend origin
+allowed_origins = [
+    "https://cpe-portal.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5500",
+]
+frontend_url = os.environ.get("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+CORS(app, origins=allowed_origins, supports_credentials=True)
 
 jwt = JWTManager(app)
 db = SQLAlchemy(app)
