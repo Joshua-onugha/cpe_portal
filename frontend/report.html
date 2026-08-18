@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Official Report</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body { background: white; padding: 40px; }
+        .report-box { border: 5px double var(--primary); padding: 40px; max-width: 800px; margin: 0 auto; position: relative; }
+        .watermark { opacity: 0.1; position: absolute; font-size: 5rem; transform: rotate(-45deg); top: 30%; left: 20%; pointer-events: none; }
+        .loading { text-align: center; padding: 100px 20px; font-size: 1.2rem; color: #888; }
+    </style>
+</head>
+<body>
+    <div id="reportContent" class="loading">Loading report...</div>
+
+    <script src="/static/js/config.js"></script>
+    <script>
+        async function loadReport() {
+            const container = document.getElementById("reportContent");
+            // Expect URL like /report.html?id=123
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+
+            if (!id) {
+                container.innerHTML = "<p>No report ID provided.</p>";
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${BACKEND_URL}/api/report/${id}`);
+                if (!resp.ok) {
+                    container.innerHTML = "<p>Report not found.</p>";
+                    return;
+                }
+                const r = await resp.json();
+
+                container.className = "";
+                container.innerHTML = `
+                    <div class="report-box">
+                        <div class="watermark">UNIBEN CPE</div>
+                        <div style="text-align: center;">
+                            <h1 style="color: var(--primary);">UNIVERSITY OF BENIN</h1>
+                            <h3>Department of Computer Engineering</h3>
+                            <h2 style="background: var(--accent); display: inline-block; padding: 5px 20px;">PROJECT AI SCAN REPORT</h2>
+                        </div>
+                        <br><hr><br>
+                        <p><b>Student Name:</b> ${r.student_name}</p>
+                        <p><b>Matric No:</b> ${r.matric_no}</p>
+                        <p><b>Project File:</b> ${r.filename}</p>
+                        <p><b>Scan Date:</b> ${r.timestamp}</p>
+                        <br>
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 20px; border: 1px solid #ddd;">
+                            <div>
+                                <h2>AI Probability: <span style="font-size: 2rem;">${r.ai_score}%</span></h2>
+                                <h3>Verdict: ${r.verdict}</h3>
+                            </div>
+                            <div style="text-align: right;">
+                                <p>Perplexity: ${r.perplexity}</p>
+                                <p>Burstiness: ${r.burstiness}</p>
+                            </div>
+                        </div>
+                        <br><br><br>
+                        <div style="display: flex; justify-content: space-between;">
+                            <div style="border-top: 1px solid black; width: 200px; padding-top: 5px;">Student Signature</div>
+                            <div style="border-top: 1px solid black; width: 200px; padding-top: 5px;">Supervisor Signature</div>
+                        </div>
+                        <div class="site-footer" style="border-top: none; margin-top: 30px; padding-bottom: 0;">
+                            &copy; 2026 Department of Computer Engineering, University of Benin. All Rights Reserved.
+                        </div>
+                    </div>
+                `;
+
+                // Auto-print once loaded
+                setTimeout(() => window.print(), 500);
+            } catch (err) {
+                container.innerHTML = `<p>Failed to load report: ${err.message}</p>`;
+            }
+        }
+
+        loadReport();
+    </script>
+</body>
+</html>

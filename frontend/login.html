@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-box">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">Admin Login</h2>
+
+            <div id="errorBox" style="display:none; background: #fee2e2; color: #ef4444; padding: 10px; border-radius: 5px; margin-bottom: 15px;"></div>
+
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                <div style="text-align: left; margin-bottom: 5px;"><b>Username</b></div>
+                <input type="text" id="username" placeholder="Enter username" required>
+                <div style="text-align: left; margin-bottom: 5px; margin-top: 15px;"><b>Password</b></div>
+                <input type="password" id="password" placeholder="Enter password" required>
+                <button type="submit" class="btn" style="margin-top: 20px;" id="loginBtn">Login securely</button>
+            </form>
+
+            <br>
+            <a href="/index.html" style="color: #666; font-size: 0.9rem;">&larr; Back to Student Portal</a>
+        </div>
+    </div>
+
+    <div class="site-footer">
+        &copy; 2026 Department of Computer Engineering, University of Benin. All Rights Reserved.
+    </div>
+
+    <script src="/static/js/config.js"></script>
+    <script>
+        // If already logged in, redirect to dashboard
+        if (localStorage.getItem("token")) {
+            window.location.href = "/dashboard.html";
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById("loginBtn");
+            const errorBox = document.getElementById("errorBox");
+
+            btn.textContent = "Logging in...";
+            btn.disabled = true;
+            errorBox.style.display = "none";
+
+            try {
+                const resp = await fetch(`${BACKEND_URL}/api/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: document.getElementById("username").value,
+                        password: document.getElementById("password").value,
+                    }),
+                });
+
+                const data = await resp.json();
+
+                if (!resp.ok || data.error) {
+                    errorBox.textContent = data.error || "Login failed";
+                    errorBox.style.display = "block";
+                    return false;
+                }
+
+                localStorage.setItem("token", data.token);
+                window.location.href = "/dashboard.html";
+            } catch (err) {
+                errorBox.textContent = "Cannot reach the server. Please try again later.";
+                errorBox.style.display = "block";
+            } finally {
+                btn.textContent = "Login securely";
+                btn.disabled = false;
+            }
+
+            return false;
+        }
+    </script>
+</body>
+</html>
