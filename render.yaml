@@ -1,0 +1,27 @@
+databases:
+  - name: cpe-portal-db
+    plan: free
+    databaseName: cpe_portal
+    user: cpe_admin
+
+services:
+  - type: web
+    name: cpe-portal-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cpe-portal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://cpe-portal.vercel.app
+      - key: PYTHON_VERSION
+        value: 3.12.7
