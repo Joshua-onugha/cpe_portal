@@ -37,8 +37,6 @@ cpe_portal/
 ├── backend/                   # Flask API — hosted on Render
 │   ├── main.py                # Flask app (routes, models, CORS, JWT)
 │   ├── requirements.txt       # Python dependencies
-│   ├── Dockerfile             # Container build config
-│   ├── Procfile               # Gunicorn start command
 │   └── app/
 │       └── stylometry/
 │           └── engine.py      # AI detection engine (heuristic stylometry)
