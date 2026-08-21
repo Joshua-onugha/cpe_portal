@@ -25,3 +25,9 @@ Thumbs.db
 
 # Agents / AI tooling
 .agents/
+
+# Training data (raw datasets are large / licensed — not committed).
+# The fitted backend/app/stylometry/weights.json IS committed.
+/data/
+/backend/data/
+*.zip

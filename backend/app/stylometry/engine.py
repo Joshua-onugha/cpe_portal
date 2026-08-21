@@ -23,7 +23,9 @@ department writing and call ``train_logistic`` to make this defensible.
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import re
 import statistics
 from collections import Counter
@@ -242,6 +244,26 @@ DEFAULT_WEIGHTS: dict[str, float] = {
 SIGNAL_KEYS = tuple(k for k in DEFAULT_WEIGHTS if k != "_bias")
 
 
+# Optional calibrated weights produced by train.py (sits next to this file).
+# If present and valid, it overrides DEFAULT_WEIGHTS; otherwise we fall back to
+# the informed priors. This is how training takes effect with no code edit —
+# train.py writes weights.json, the engine picks it up on next start.
+_WEIGHTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights.json")
+
+
+def load_active_weights(path: str = _WEIGHTS_FILE) -> dict:
+    """Return calibrated weights from ``weights.json`` if present/valid, else defaults."""
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return {k: float(data[k]) for k in DEFAULT_WEIGHTS}
+    except (OSError, ValueError, TypeError, KeyError):
+        return dict(DEFAULT_WEIGHTS)
+
+
+ACTIVE_WEIGHTS: dict[str, float] = load_active_weights()
+
+
 def _score_signals(signals: dict, weights: dict) -> float:
     """Logistic combination of signals → AI probability in [0, 1]."""
     z = weights.get("_bias", 0.0)
@@ -337,7 +359,7 @@ def analyze_text(text: str, min_words: int = 80, weights: dict | None = None) ->
     band, per-signal detail, per-paragraph breakdown, and a ``confidence`` that
     reflects both sample length and how decisively the signals point one way.
     """
-    weights = weights or DEFAULT_WEIGHTS
+    weights = weights or ACTIVE_WEIGHTS
     features = extract_features(text)
 
     if features["words"] < min_words:

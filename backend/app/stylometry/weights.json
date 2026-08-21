@@ -1,0 +1,20 @@
+{
+  "_bias": -0.6780085817555835,
+  "sentence_uniformity": 3.493490734233846,
+  "low_lexical_diversity": -1.7197961544933527,
+  "word_repetition": -0.5669730681075271,
+  "ngram_repetition": 2.2936133060221087,
+  "low_opener_diversity": -0.4661215368460575,
+  "templated_language": 3.350556980696611,
+  "low_punctuation": -2.041694120176106,
+  "low_hapax": -1.3899941409461154,
+  "function_word_extremity": -1.0657302873360357,
+  "_meta": {
+    "source": "train_v2_drcat_02.csv",
+    "train_samples": 8000,
+    "test_samples": 2000,
+    "accuracy": 0.7775,
+    "f1": 0.7783,
+    "seed": 1234
+  }
+}

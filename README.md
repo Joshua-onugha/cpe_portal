@@ -11,7 +11,7 @@ An AI-powered academic integrity tool built for the **Department of Computer Eng
 
 ## ✨ Features
 
-- **AI Detection Engine** — Local stylometric analysis (no external API dependencies) that evaluates sentence uniformity, vocabulary richness, repetition rate, and punctuation density
+- **AI Detection Engine** — Local stylometric **logistic model** (no external API) trained on a public 44k-essay dataset; evaluates sentence uniformity, lexical diversity, phrase repetition, templated language, punctuation, and more
 - **PDF & DOCX Support** — Extracts and analyzes text from uploaded project files
 - **Duplicate Submission Guard** — Prevents multiple submissions per matriculation number
 - **Admin Dashboard** — JWT-protected panel with real-time charts, submission history, and override controls
@@ -39,7 +39,9 @@ cpe_portal/
 │   ├── requirements.txt       # Python dependencies
 │   └── app/
 │       └── stylometry/
-│           └── engine.py      # AI detection engine (heuristic stylometry)
+│           ├── engine.py      # AI detection engine (trained logistic model)
+│           ├── train.py       # Re-calibrate weights on labelled data
+│           └── weights.json   # Fitted model weights (auto-loaded)
 │
 └── render.yaml                # Render deployment blueprint
 ```
@@ -51,7 +53,7 @@ cpe_portal/
 | Frontend | HTML5, CSS3, Vanilla JavaScript, Chart.js |
 | Backend | Python 3.12, Flask, Flask-CORS, Flask-JWT-Extended |
 | Database | PostgreSQL (Render) / SQLite (local dev) |
-| AI Engine | Custom stylometric analysis (no ML model required) |
+| AI Engine | Stylometric logistic model (pure Python, trained on 44k essays) |
 | File Parsing | PyPDF2, python-docx |
 | Hosting | Vercel (frontend), Render (backend + database) |
 
@@ -111,19 +113,28 @@ Visit `http://localhost:5500`.
 
 ## 📝 How the AI Detection Works
 
-The stylometry engine analyzes writing patterns **without any external AI model**. It computes:
+The engine extracts ~9 length-robust **stylometric features** from the text and combines them with a **logistic-regression model** — no external AI API and no heavy ML framework (pure Python). Features include:
 
-1. **Sentence Uniformity** — AI text tends to have very consistent sentence lengths
-2. **Vocabulary Richness** — AI text often has lower lexical diversity
-3. **Repetition Rate** — AI tends to repeat phrases and structures
-4. **Punctuation Density** — AI text often underuses varied punctuation
+1. **Sentence uniformity** — AI text tends toward consistent sentence lengths
+2. **Lexical diversity (MATTR)** — length-robust vocabulary richness
+3. **Phrase repetition** — repeated bigrams/trigrams and word reuse
+4. **Templated language** — over-produced transitions/buzzwords ("furthermore", "delve", "pivotal", …)
+5. **Opener diversity, punctuation, hapax rate, function-word balance**
 
-These signals are weighted and combined into an AI probability score (0–100%), classified as:
+The weights are **trained, not guessed** — fitted on the public [DAIGT V2](https://www.kaggle.com/datasets/thedrcat/daigt-v2-train-dataset) dataset (~44k human/AI essays), scoring **77.8% held-out accuracy** (precision 79%, recall 77%). Re-calibrate anytime on your own labelled samples:
+
+```bash
+cd backend/app/stylometry
+python train.py path/to/data.csv     # CSV with text,label columns (1=AI, 0=human)
+python train.py path/to/folder       # or folders: human/*.txt + ai/*.txt
+```
+
+This writes `weights.json`, which the engine auto-loads on startup. The resulting score (0–100%) is classified as:
 - 🟢 **Human Written** (< 42%)
-- 🟡 **Mixed** (42–68%)
+- 🟡 **Mixed / needs review** (42–68%)
 - 🔴 **AI Generated** (> 68%)
 
-> **Disclaimer:** This is a heuristic estimate based on stylometric patterns, not definitive proof of AI authorship.
+> **Disclaimer:** A statistical estimate from stylometric patterns — a flag for human review, **not** proof of AI authorship.
 
 ## 📄 License
 
