@@ -1,4 +1,4 @@
-# UNIBEN CPE Sentinel — AI Project Scanner
+# Acadetect — AI Project Scanner
 
 An AI-powered academic integrity tool built for the **Department of Computer Engineering, University of Benin**. The platform scans final-year project submissions (PDF/DOCX) for AI-generated content using stylometric analysis, providing administrators with real-time analytics and students with instant feedback.
 
